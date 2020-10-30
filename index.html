@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Document</title>
+  <title>particle</title>
   <style>
     html,
     body {
@@ -13,7 +13,7 @@
       padding: 0;
       width: 100%;
       height: 100%;
-      background-image: linear-gradient(to bottom, #243949 0%, #517fa4 100%);
+      background-image: linear-gradient(to top, #000000 10%, #0074d1 100%);
       overflow: hidden;
     }
   </style>
@@ -23,14 +23,18 @@
   <script src="index.js"></script>
   <script>
     init('body', {
-      color: 'rgba(255, 255, 255, 0.3)',
-      radius: 10,
-      rate: 2,
-      count: 20,
-      distance: 20,
-      line: true,
-      bounce: true,
-      resize: true
+      color: 'rgba(255, 255, 255, 0.5)',
+      radius: 5,
+      rate: 0.5,
+      rateX: 2,
+      rateY: 2,
+      count: 200,
+      distance: 100,
+      line: false,
+      bounce: false,
+      resize: true,
+      directionFixed: false, // 水平或垂直方向运动（rateX或rateY需设置为0）
+      mousemove: true  // 鼠标跟随画线，与line互斥
     })
   </script>
 </body>
