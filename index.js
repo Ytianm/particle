@@ -1,20 +1,8 @@
-function scale(canvasList, opt) {
-  const ratio = window.devicePixelRatio || 1;
-  let ctx = null;
-
-  canvasList.forEach(function (canvas) {
-    ctx = canvas.getContext('2d');
-    canvas.style.position = opt.position;
-    canvas.style.width = opt.width + 'px';
-    canvas.style.height = opt.height + 'px';
-    canvas.width = opt.width * ratio;
-    canvas.height = opt.height * ratio;
-    ctx.scale(ratio, ratio);
-  });
-
-  return canvasList;
-}
-
+/**
+ * canvas粒子
+ * @param {string} element 
+ * @param {object} config 
+ */
 const Particle = function Particle(element, config) {
   const _this = this;
   if (config === void 0) config = {};
@@ -24,6 +12,7 @@ const Particle = function Particle(element, config) {
   this.width = this.element.clientWidth;
   this.height = this.element.clientHeight;
   this.distance = config.distance || this.width / 10;
+  this.mouseField = config.mouseField || 100;
   this.radius = config.radius || 2;
   this.points = [];
   this.count = config.count || 100;
@@ -37,7 +26,7 @@ const Particle = function Particle(element, config) {
   this.bounce = typeof config.bounce === 'boolean' ? config.bounce : false;
   this.appendCanvas();
   for (let i = 0; i < this.count; i++) {
-    this.points.push(this.getPoint());
+    this.points.push(this.createPoint());
   }
 
   if (this.resize) {
@@ -48,10 +37,6 @@ const Particle = function Particle(element, config) {
       _this.rate = config.rate || _this.width / 10000;
       _this.canvas.width = _this.width;
       _this.canvas.height = _this.height;
-      scale([_this.canvas], {
-        width: _this.width,
-        height: _this.height
-      });
     };
   }
 };
@@ -62,21 +47,17 @@ Particle.prototype.appendCanvas = function appendCanvas() {
   this.ctx = this.canvas.getContext('2d');
   this.canvas.width = this.width;
   this.canvas.height = this.height;
-  scale([this.canvas], {
-    width: this.width,
-    height: this.height
-  });
   this.canvas.style.zIndex = this.zIndex;
   this.element.appendChild(this.canvas);
-  this.handleMouse(this.canvas);
+  this.handleMouse();
 };
 
 // 生成点
-Particle.prototype.getPoint = function getPoint() {
-  const num = this.directionFixed ? 0 : 1;
-  let x = Math.ceil(Math.random() * this.width), // x坐标
-    y = Math.ceil(Math.random() * this.height), // y坐标
-    r = +(Math.random() * this.radius).toFixed(4), // 半径
+Particle.prototype.createPoint = function createPoint(pointX, pointY) {
+  const num = this.directionFixed ? 0 : 1; // num为0时rateX/Y计算值只有正或者负，为1时正负都有
+  let x = pointX || Math.ceil(Math.random() * this.width), // x坐标
+    y = pointY || Math.ceil(Math.random() * this.height), // y坐标
+    r = +(Math.random() * this.radius).toFixed(4), // 半径可
     rateX = (Math.random() * this.rateX - num).toFixed(4), // x方向速度
     rateY = (Math.random() * this.rateY - num).toFixed(4); // y方向速度
 
@@ -103,7 +84,7 @@ Particle.prototype.draw = function draw() {
   this.ctx.clearRect(0, 0, this.width, this.height);
   this.drawPoints();
   this.drawLines();
-  window.requestAnimationFrame(this.draw.bind(this));
+  window.requestAnimationFrame(this.draw.bind(this)); // 开启动画
 };
 
 // 画点
@@ -137,7 +118,7 @@ Particle.prototype.drawPoints = function drawPoints() {
         item.y += item.rateY * _this.rate;
       } else {
         _this.points.splice(i, 1); // 超出窗口范围后清除
-        _this.points.push(_this.getPoint(_this.radius)); // 重新生成一个
+        _this.points.push(_this.createPoint(_this.radius)); // 重新生成一个
       }
     }
   });
@@ -158,13 +139,15 @@ Particle.prototype.drawLines = function drawLines(mouseX, mouseY) {
 
        // this.line || (this.mousemove && 在鼠标一定范围内)
       if ((this.line && !this.mousemove)
-        || (!this.line && this.mousemove && (x1 > this.mouseX - this.distance && x1 < this.mouseX + this.distance
-        && x2 > this.mouseX - this.distance && x2 < this.mouseX + this.distance
-        && y1 > this.mouseY - this.distance && y1 < this.mouseY + this.distance
-        && y2 > this.mouseY - this.distance && y2 < this.mouseY + this.distance))) {
+        || (!this.line && this.mousemove && (x1 > this.mouseX - this.mouseField && x1 < this.mouseX + this.mouseField
+        && x2 > this.mouseX - this.mouseField && x2 < this.mouseX + this.mouseField
+        && y1 > this.mouseY - this.mouseField && y1 < this.mouseY + this.mouseField
+        && y2 > this.mouseY - this.mouseField && y2 < this.mouseY + this.mouseField))) {
         if (disPoint <= this.distance) {
           this.ctx.beginPath();
           this.ctx.moveTo(x1, y1); // 起点
+          // this.ctx.lineTo(x2, y2); // 终点
+          this.ctx.moveTo(this.mouseX, this.mouseY); // 连接鼠标
           this.ctx.lineTo(x2, y2); // 终点
           this.ctx.strokeStyle = this.color;
           this.ctx.lineWidth = 1 - disPoint / this.distance; // 通过控制两点连线线宽实现渐显效果
@@ -176,11 +159,14 @@ Particle.prototype.drawLines = function drawLines(mouseX, mouseY) {
 };
 
 // 鼠标移动
-Particle.prototype.handleMouse = function handleMouse(canvas) {
-  canvas.addEventListener('mousemove', (e) => {
-    this.mouseX = e.x;
-    this.mouseY = e.y;
+Particle.prototype.handleMouse = function handleMouse() {
+  this.canvas.addEventListener('mousemove', pos => {
+    this.mouseX = pos.x;
+    this.mouseY = pos.y;
     this.mousemove = this.config.mousemove;
+  })
+  this.canvas.addEventListener('mouseleave', () => {
+    this.mousemove = false;
   })
 }
 
